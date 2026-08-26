@@ -4,8 +4,10 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.roadmap.auth.dto.LoginUserDto;
 import org.roadmap.auth.dto.RegisterUserDto;
 import org.roadmap.auth.dto.request.CreateUserRequest;
+import org.roadmap.auth.dto.request.SignInRequest;
 import org.roadmap.auth.dto.response.UserResponse;
 import org.roadmap.auth.mapper.UserMapper;
 import org.roadmap.auth.service.AuthService;
@@ -33,6 +35,18 @@ public class AuthController {
 
         return ResponseEntity
                 .status(HttpStatus.CREATED)
+                .body(userResponse);
+    }
+
+    @PostMapping("/sign-in")
+    @Operation(summary = "Аутентификация пользователя")
+    public ResponseEntity<UserResponse> signIn(@Valid @RequestBody SignInRequest request){
+        LoginUserDto loginUserDto = userMapper.toLoginUserDto(request);
+
+        UserResponse userResponse = authService.signIn(loginUserDto);
+
+        return ResponseEntity.
+                status(HttpStatus.OK)
                 .body(userResponse);
     }
 
