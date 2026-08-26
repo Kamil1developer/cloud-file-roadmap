@@ -1,4 +1,4 @@
-package org.roadmap.cloudstorage;
+package org.roadmap;
 
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;

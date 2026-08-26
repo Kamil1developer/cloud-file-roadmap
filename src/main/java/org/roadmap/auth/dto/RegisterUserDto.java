@@ -1,11 +1,11 @@
-package org.roadmap.dto.request;
+package org.roadmap.auth.dto;
 
 import lombok.Data;
 import lombok.RequiredArgsConstructor;
 
 @Data
 @RequiredArgsConstructor
-public class CreateUserRequest {
+public class RegisterUserDto {
     private final String username;
     private final String password;
 }
