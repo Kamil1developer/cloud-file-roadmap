@@ -29,24 +29,4 @@ public class AuthService {
 
         return userMapper.toUserResponse(user);
     }
-
-    public UserResponse signIn(LoginUserDto loginUserDto){
-        String password = loginUserDto.password();
-        String username = loginUserDto.username();
-
-        Optional<String> stringOptional = userRepository.findPasswordHashByUsername(username);
-
-        String passwordHash = null;
-        if( stringOptional.isPresent()){
-            passwordHash = stringOptional.get();
-        }
-
-        if(passwordEncoder.matches(password, passwordHash)){
-            return new UserResponse(username);
-        }
-        else{
-            throw new BadCredentialsException("неверные данные");
-        }
-
-    }
 }
