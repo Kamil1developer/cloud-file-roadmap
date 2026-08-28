@@ -8,17 +8,16 @@ import lombok.RequiredArgsConstructor;
 
 @Data
 @RequiredArgsConstructor
-
 public class CreateUserRequest {
     @Pattern(
-            regexp = "^[A-Za-z@.]+$",
+            regexp = "^[A-Za-z0-9@.]+$",
             message = "Имя пользователя должно быть на латинском")
     @NotBlank
     @Size(min = 3 , max = 10)
     private final String username;
 
     @Pattern(
-            regexp = "^[A-Za-z@.]+$",
+            regexp = "^[A-Za-z0-9@.]+$",
             message = "Пароль должен быть на латинском")
     @NotBlank
     private final String password;

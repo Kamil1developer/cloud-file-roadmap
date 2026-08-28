@@ -11,6 +11,9 @@ import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.crypto.factory.PasswordEncoderFactories;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.context.HttpSessionSecurityContextRepository;
+import org.springframework.security.web.context.SecurityContextRepository;
+import org.springframework.security.web.savedrequest.NullRequestCache;
 
 @Configuration
 public class SecurityConfig {
@@ -25,14 +28,21 @@ public class SecurityConfig {
         return http
                 .csrf(csrf -> csrf.disable())
                 .formLogin(form -> form.disable())
+                .requestCache(cache -> cache.requestCache(new NullRequestCache()))
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers("/sign-in").permitAll()
-                        .requestMatchers("/sign-up").permitAll()
+                        .requestMatchers(
+                                "/auth/sign-in",
+                                "/auth/sign-up").permitAll()
+                        .requestMatchers(
+                                "/swagger-ui/**",
+                                "/v3/api-docs/**",
+                                "/swagger-ui.html"
+                        ).permitAll()
                         .requestMatchers("/profile").authenticated()
                         .anyRequest().authenticated()
                 )
                 .logout(logout -> logout.
-                        logoutUrl("/logout")
+                        logoutUrl("/sign-out")
                         .invalidateHttpSession(true)
                         .clearAuthentication(true)
                         .deleteCookies("JSESSIONID"))
@@ -50,5 +60,10 @@ public class SecurityConfig {
         provider.setPasswordEncoder(passwordEncoder);
 
         return new ProviderManager(provider);
+    }
+
+    @Bean
+    public SecurityContextRepository securityContextRepository(){
+        return new HttpSessionSecurityContextRepository();
     }
 }
