@@ -94,6 +94,12 @@
             <artifactId>spring-boot-starter-session-data-redis</artifactId>
         </dependency>
 
+        <dependency>
+            <groupId>io.minio</groupId>
+            <artifactId>minio</artifactId>
+            <version>9.0.3</version>
+        </dependency>
+
     </dependencies>
 
     <build>
