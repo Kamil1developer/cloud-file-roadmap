@@ -1,5 +1,6 @@
 package org.roadmap.config;
 
+import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.authentication.AuthenticationManager;
@@ -29,6 +30,19 @@ public class SecurityConfig {
                 .csrf(csrf -> csrf.disable())
                 .formLogin(form -> form.disable())
                 .requestCache(cache -> cache.requestCache(new NullRequestCache()))
+                .exceptionHandling(exception -> exception
+                        .authenticationEntryPoint((request, response, authException) ->{
+                        response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+                        response.setContentType("application/json");
+                        response.setCharacterEncoding("UTF-8");
+
+                        response.getWriter().write(
+                                """
+                                {
+                                  "message": "пользователь не авторизован"
+                                }
+                                """
+                        );}))
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers(
                                 "/auth/sign-in",
@@ -38,7 +52,6 @@ public class SecurityConfig {
                                 "/v3/api-docs/**",
                                 "/swagger-ui.html"
                         ).permitAll()
-                        .requestMatchers("/profile").authenticated()
                         .anyRequest().authenticated()
                 )
                 .logout(logout -> logout.
