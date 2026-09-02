@@ -3,7 +3,7 @@ package org.roadmap.dto.response;
 public record UploadResponse(
         String path,
         String name,
-        int size,
+        long size,
         String type
 ) {
 
