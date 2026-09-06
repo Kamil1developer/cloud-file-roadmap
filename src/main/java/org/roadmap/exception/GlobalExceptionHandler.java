@@ -1,13 +1,15 @@
-package org.roadmap.auth.exception;
+package org.roadmap.exception;
 
+import org.roadmap.storage.exception.ResourceNotFoundException;
+import org.roadmap.storage.exception.StorageException;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
-import org.springframework.web.bind.annotation.ResponseBody;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+
 
 @RestControllerAdvice
 public class GlobalExceptionHandler {
@@ -16,28 +18,42 @@ public class GlobalExceptionHandler {
     public ResponseEntity<ErrorResponse> handleValidationException(){
         return ResponseEntity
                 .badRequest()
-                .body(new ErrorResponse("400", "ошибка валидации"));
+                .body(new ErrorResponse(400, "ошибка валидации"));
     }
 
     @ExceptionHandler(DataIntegrityViolationException.class)
     public ResponseEntity<ErrorResponse> handleDuplicateException(){
         return ResponseEntity
                 .status(HttpStatus.CONFLICT)
-                .body(new ErrorResponse("409", "пользователь занят"));
+                .body(new ErrorResponse(409, "пользователь занят"));
     }
 
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ErrorResponse> handleUnexpectedException(){
         return ResponseEntity
                 .badRequest()
-                .body(new ErrorResponse("500", "неизвестная ошибка"));
+                .body(new ErrorResponse(500, "неизвестная ошибка"));
     }
 
     @ExceptionHandler(BadCredentialsException.class)
     public ResponseEntity<ErrorResponse> handleBadCredentials(){
         return ResponseEntity.
                 status(HttpStatus.UNAUTHORIZED)
-                .body(new ErrorResponse("401","неверные данные (такого пользователя нет, или пароль неправильный)"));
+                .body(new ErrorResponse(401,"неверные данные (такого пользователя нет, или пароль неправильный)"));
     }
 
+    @ExceptionHandler(StorageException.class)
+    public ResponseEntity<ErrorResponse> handleStorageException(StorageException exception){
+        return ResponseEntity.
+                status(HttpStatus.UNAUTHORIZED)
+                .body(new ErrorResponse(500, exception.getMessage()));
+    }
+
+    @ExceptionHandler(ResourceNotFoundException.class)
+    public ResponseEntity<ErrorResponse> handleResourceNotFoundException(ResourceNotFoundException exception){
+        return ResponseEntity.
+                status(HttpStatus.NOT_FOUND)
+                .body(new ErrorResponse(404, exception.getMessage()));
+    }
 }
+
