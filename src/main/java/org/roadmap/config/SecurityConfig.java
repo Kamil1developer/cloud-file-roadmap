@@ -1,6 +1,8 @@
 package org.roadmap.config;
 
 import jakarta.servlet.http.HttpServletResponse;
+import lombok.RequiredArgsConstructor;
+import org.roadmap.config.web.CorsProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.authentication.AuthenticationManager;
@@ -23,7 +25,9 @@ import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 import java.util.List;
 
 @Configuration
+@RequiredArgsConstructor
 public class SecurityConfig {
+    private final CorsProperties corsProperties;
 
     @Bean
     public PasswordEncoder passwordEncoder(){
@@ -94,9 +98,9 @@ public class SecurityConfig {
 
         CorsConfiguration configuration = new CorsConfiguration();
 
-        configuration.setAllowedOrigins(List.of(
-                "http://localhost:5173"
-        ));
+        configuration.setAllowedOrigins(
+                corsProperties.getAllowedOrigins()
+        );
 
         configuration.setAllowedMethods(List.of(
                 "GET",
