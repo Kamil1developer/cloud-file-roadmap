@@ -3,6 +3,7 @@ package org.roadmap.auth.mapper;
 import org.mapstruct.Mapper;
 import org.roadmap.auth.dto.RegisterUserDto;
 import org.roadmap.auth.dto.request.CreateUserRequest;
+import org.roadmap.auth.dto.request.SignInRequest;
 import org.roadmap.auth.dto.response.UserResponse;
 import org.roadmap.entity.User;
 
