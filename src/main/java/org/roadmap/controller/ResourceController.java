@@ -1,10 +1,14 @@
 package org.roadmap.controller;
 
 import io.swagger.v3.oas.annotations.Operation;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Pattern;
 import lombok.RequiredArgsConstructor;
-import org.roadmap.service.DeleteService;
-import org.roadmap.service.UploadService;
+import org.roadmap.service.DeleteResourceService;
+import org.roadmap.service.GetResourceService;
+import org.roadmap.service.UploadResourceService;
 import org.roadmap.dto.response.UploadResponse;
+import org.simpleframework.xml.core.Validate;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -19,8 +23,9 @@ import java.util.Optional;
 @RequestMapping("resource")
 @RequiredArgsConstructor
 public class ResourceController {
-    private final UploadService uploadService;
-    private final DeleteService deleteService;
+    private final UploadResourceService uploadService;
+    private final DeleteResourceService deleteService;
+    private final GetResourceService getService;
 
     @Operation(summary = "upload")
     @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
@@ -49,5 +54,17 @@ public class ResourceController {
         return ResponseEntity
                 .status(HttpStatus.NO_CONTENT)
                 .build();
+    }
+
+    @Operation(summary = "getResource")
+    @GetMapping
+    public ResponseEntity<UploadResponse> get(@RequestParam("path")
+                                                  @Pattern(regexp = "^(?!/)(?!.*//)(?!.*\\\\\\\\)[^\\\\p{Cntrl}]+$", message = "невалидный или отсутствующий путь")
+                                                  @NotBlank
+                                                  String path) {
+        UploadResponse uploadResponse = getService.get(path);
+
+        return ResponseEntity.status(HttpStatus.OK)
+                .body(uploadResponse);
     }
 }
