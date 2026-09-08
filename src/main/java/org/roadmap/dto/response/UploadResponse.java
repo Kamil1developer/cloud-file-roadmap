@@ -5,6 +5,6 @@ public record UploadResponse(
         String name,
         long size,
         String type
-) {
+){
 
 }
