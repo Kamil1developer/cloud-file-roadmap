@@ -1,8 +1,13 @@
 package org.roadmap.storage.exception;
 
-public class StorageException extends RuntimeException {
-    public StorageException(Throwable cause) {
+import lombok.Getter;
 
-        super("Ошибка с хранилищем");
+@Getter
+public class StorageException extends RuntimeException {
+    private final String message = "неизвестная ошибка";
+
+    public StorageException(){
+        super("неизвестная ошибка");
     }
+
 }
