@@ -7,12 +7,15 @@ import io.minio.messages.DeleteResult;
 import io.minio.messages.Item;
 import lombok.RequiredArgsConstructor;
 import org.roadmap.config.storage.MinioProperties;
+import org.roadmap.mapper.DirectoryContentMapper;
 import org.roadmap.storage.dto.request.ObjectUploadRequest;
 import org.roadmap.storage.exception.ResourceNotFoundException;
 import org.roadmap.storage.exception.StorageException;
+import org.roadmap.storage.model.DirectoryResource;
 import org.roadmap.storage.model.StorageResource;
 import org.springframework.stereotype.Component;
 
+import java.io.InputStream;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
@@ -66,6 +69,8 @@ public class MinioStorageImpl implements MinioStorage {
 
                 String parentPath = Path.of(item.get().objectName()).getParent() != null ?
                         Path.of(item.get().objectName()).getParent().toString(): "";
+                parentPath = parentPath + "/";
+
                 String fileName = Path.of(item.get().objectName()).getFileName().toString();
                 long size = item.get().size();
                 String type = item.get().isDir() ? "DIRECTORY" : "FILE";
@@ -143,9 +148,10 @@ public class MinioStorageImpl implements MinioStorage {
 
             String parentPath = Path.of(item.get().objectName()).getParent() != null ?
                     Path.of(item.get().objectName()).getParent().toString(): "";
+            parentPath = parentPath + "/";
             String fileName = Path.of(item.get().objectName()).getFileName().toString();
             long size = item.get().size();
-            String type = item.get().isDir() ? "DIRECTORY" : "FILE";
+            String type = item.get().objectName().endsWith("/") ? "DIRECTORY" : "FILE";
 
             resources.add(new StorageResource(parentPath, fileName, size, type));
 
@@ -162,7 +168,7 @@ public class MinioStorageImpl implements MinioStorage {
             );
 
             return new StorageResource(
-                    Path.of(path).getParent().toString(),
+                    Path.of(path).getParent().toString() + "/",
                     Path.of(path).getFileName().toString(),
                     response.size(),
                     response.contentType()
@@ -172,5 +178,49 @@ public class MinioStorageImpl implements MinioStorage {
         catch (MinioException e){
             throw new StorageException();
         }
+    }
+
+    @Override
+    public DirectoryResource createDirectoryByPath(String path) {
+        String bucketName = properties.getBucket();
+
+        try {
+
+            if (client.bucketExists(BucketExistsArgs.builder().bucket(bucketName).build())) {
+                client.putObject(PutObjectArgs.builder()
+                        .bucket(bucketName)
+                        .stream(InputStream.nullInputStream(), 0L, -1L)
+                        .object(path)
+                        .build());
+
+            }
+            else {
+                client.makeBucket(MakeBucketArgs.builder().bucket(bucketName).build());
+
+                client.putObject(PutObjectArgs.builder()
+                        .bucket(bucketName)
+                        .stream(InputStream.nullInputStream(), 0L, -1L)
+                        .object(path)
+                        .build());
+            }
+
+            StatObjectResponse response = client.statObject(StatObjectArgs.builder()
+                    .bucket(properties.getBucket())
+                    .object(path)
+                    .build()
+            );
+
+            String type = response.object().endsWith("/") ? "DIRECTORY" : "FILE";
+
+            return new DirectoryResource(
+                    Path.of(path).getParent().toString(),
+                    Path.of(path).getFileName().toString(),
+                    type
+                    );
+
+        } catch (MinioException e) {
+            throw new StorageException();
+        }
+
     }
 }
