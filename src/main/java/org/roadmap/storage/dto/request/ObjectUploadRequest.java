@@ -1,4 +1,4 @@
-package org.roadmap.storage.dto;
+package org.roadmap.storage.dto.request;
 
 import java.io.InputStream;
 
