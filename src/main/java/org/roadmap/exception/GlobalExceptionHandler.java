@@ -7,8 +7,10 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
+import org.springframework.web.bind.MissingServletRequestParameterException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.method.annotation.HandlerMethodValidationException;
 
 
 @RestControllerAdvice
@@ -54,6 +56,15 @@ public class GlobalExceptionHandler {
         return ResponseEntity.
                 status(HttpStatus.NOT_FOUND)
                 .body(new ErrorResponse(404, exception.getMessage()));
+    }
+    @ExceptionHandler({
+            MissingServletRequestParameterException.class,
+            HandlerMethodValidationException.class
+    })
+    public ResponseEntity<ErrorResponse> handleInvalidRequestParameter(){
+        return ResponseEntity.
+                status(HttpStatus.BAD_REQUEST)
+                .body(new ErrorResponse(400, "невалидный или отсутствующий путь"));
     }
 }
 
