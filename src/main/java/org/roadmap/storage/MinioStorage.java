@@ -1,11 +1,19 @@
 package org.roadmap.storage;
 
-import io.minio.errors.MinioException;
-import org.roadmap.storage.dto.ObjectUploadRequest;
-import org.springframework.web.multipart.MultipartFile;
+import io.minio.Result;
+import io.minio.messages.DeleteResult;
+import org.roadmap.storage.dto.request.ObjectUploadRequest;
+import org.roadmap.storage.model.DirectoryResource;
+import org.roadmap.storage.model.StorageResource;
 
-import java.io.InputStream;
+import java.util.List;
 
 public interface MinioStorage {
-    void upload(ObjectUploadRequest uploadRequest);
+    StorageResource  upload(ObjectUploadRequest uploadRequest);
+    List<StorageResource> getContentByDirectory(String path);
+    void deleteByPath(String path);
+    StorageResource getResourceByPath(String path);
+    DirectoryResource createDirectoryByPath(String path);
+
+
 }
