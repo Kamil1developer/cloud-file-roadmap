@@ -7,10 +7,10 @@ import io.minio.messages.DeleteResult;
 import io.minio.messages.Item;
 import lombok.RequiredArgsConstructor;
 import org.roadmap.config.storage.MinioProperties;
-import org.roadmap.mapper.DirectoryContentMapper;
 import org.roadmap.storage.dto.request.ObjectUploadRequest;
 import org.roadmap.storage.exception.ResourceNotFoundException;
 import org.roadmap.storage.exception.StorageException;
+import org.roadmap.storage.mapper.MinioStorageMapper;
 import org.roadmap.storage.model.DirectoryResource;
 import org.roadmap.storage.model.StorageResource;
 import org.springframework.stereotype.Component;
@@ -25,6 +25,8 @@ import java.util.List;
 public class MinioStorageImpl implements MinioStorage {
     private final MinioClient client;
     private final MinioProperties properties;
+    private final MinioStorageMapper storageMapper;
+
 
     @Override
     public StorageResource upload(ObjectUploadRequest uploadRequest) {
@@ -39,8 +41,7 @@ public class MinioStorageImpl implements MinioStorage {
                         .object(uploadRequest.fileName())
                         .build());
 
-            }
-            else {
+            } else {
                 client.makeBucket(MakeBucketArgs.builder().bucket(bucketName).build());
 
                 client.putObject(PutObjectArgs.builder()
@@ -57,52 +58,22 @@ public class MinioStorageImpl implements MinioStorage {
                             .prefix(uploadRequest.fileName())
                             .build()
             );
-            return toStorageResource(objects);
+            return storageMapper.toStorageResource(objects);
         } catch (MinioException e) {
             throw new StorageException();
         }
     }
 
-    public StorageResource toStorageResource(Iterable<Result<Item>> objects) {
-        try {
-            for (Result<Item> item : objects) {
-
-                String parentPath = Path.of(item.get().objectName()).getParent() != null ?
-                        Path.of(item.get().objectName()).getParent().toString(): "";
-                parentPath = parentPath + "/";
-
-                String fileName = Path.of(item.get().objectName()).getFileName().toString();
-                long size = item.get().size();
-                String type = item.get().isDir() ? "DIRECTORY" : "FILE";
-
-                return new StorageResource(parentPath, fileName, size, type);
-            }
-
-            throw new StorageException();
-        }
-        catch (MinioException e) {
-            throw new StorageException();
-        }
-    }
 
     public List<StorageResource> getContentByDirectory(String path) {
         try {
-            if (path.isEmpty()) {
-                Iterable<Result<Item>> objects = client.listObjects(ListObjectsArgs.builder()
-                        .bucket(properties.getBucket())
-                        .build()
-                );
+            Iterable<Result<Item>> objects = client.listObjects(ListObjectsArgs.builder()
+                    .bucket(properties.getBucket())
+                    .prefix(path)
+                    .build()
+            );
 
-                return toStorageResources(objects);
-            }
-            else {
-                Iterable<Result<Item>> objects = client.listObjects(ListObjectsArgs.builder()
-                        .bucket(properties.getBucket())
-                        .prefix(path)
-                        .build()
-                );
-                return toStorageResources(objects);
-            }
+            return storageMapper.toStorageResources(objects, path);
 
         } catch (MinioException e) {
             throw new StorageException();
@@ -112,14 +83,16 @@ public class MinioStorageImpl implements MinioStorage {
     @Override
     public void deleteByPath(String path) {
         try {
+
             Iterable<Result<Item>> objects = client.listObjects(ListObjectsArgs.builder()
                     .bucket(properties.getBucket())
                     .prefix(path)
                     .build()
             );
             List<DeleteRequest.Object> deleteObjects = new ArrayList<>();
-            for (Result<Item> item: objects) {
-                deleteObjects.add(new DeleteRequest.Object(item.get().objectName()));
+            for (Result<Item> item : objects) {
+                Item minioItem = item.get();
+                deleteObjects.add(new DeleteRequest.Object(minioItem.objectName()));
             }
 
             Iterable<Result<DeleteResult.Error>> results =
@@ -129,53 +102,33 @@ public class MinioStorageImpl implements MinioStorage {
                                     .objects(deleteObjects)
                                     .build()
                     );
-            if (deleteObjects.isEmpty()){
+            if (deleteObjects.isEmpty()) {
                 throw new ResourceNotFoundException();
             }
-            for (Result<DeleteResult.Error> errorResult: results){
+            for (Result<DeleteResult.Error> errorResult : results) {
                 DeleteResult.Error error = errorResult.get();
             }
-        }
-        catch (MinioException e){
+        } catch (MinioException e) {
             throw new StorageException();
         }
     }
 
-    private List<StorageResource> toStorageResources(Iterable<Result<Item>> objects) throws MinioException {
-
-        List<StorageResource> resources = new ArrayList<>();
-        for (Result<Item> item : objects) {
-
-            String parentPath = Path.of(item.get().objectName()).getParent() != null ?
-                    Path.of(item.get().objectName()).getParent().toString(): "";
-            parentPath = parentPath + "/";
-            String fileName = Path.of(item.get().objectName()).getFileName().toString();
-            long size = item.get().size();
-            String type = item.get().objectName().endsWith("/") ? "DIRECTORY" : "FILE";
-
-            resources.add(new StorageResource(parentPath, fileName, size, type));
-
-        }
-        return resources;
-    }
-
-    public StorageResource getResourceByPath(String path){
+    public StorageResource getResourceByPath(String path) {
         try {
             StatObjectResponse response = client.statObject(StatObjectArgs.builder()
                     .bucket(properties.getBucket())
                     .object(path)
                     .build()
             );
+            Path parent = Path.of(path).getParent();
 
-            return new StorageResource(
-                    Path.of(path).getParent().toString() + "/",
-                    Path.of(path).getFileName().toString(),
-                    response.size(),
-                    response.contentType()
-                    );
-        }
+            String pathParent = parent == null ? "" : parent.toString() + "/";
+            String name = Path.of(path).getFileName().toString();
+            Long size = !(response.size() == 0) ? response.size(): null;
+            String type = response.object().endsWith("/") ? "DIRECTORY" : "FILE";
 
-        catch (MinioException e){
+            return new StorageResource(pathParent, name, size, type);
+        } catch (MinioException e) {
             throw new StorageException();
         }
     }
@@ -193,8 +146,7 @@ public class MinioStorageImpl implements MinioStorage {
                         .object(path)
                         .build());
 
-            }
-            else {
+            } else {
                 client.makeBucket(MakeBucketArgs.builder().bucket(bucketName).build());
 
                 client.putObject(PutObjectArgs.builder()
@@ -210,17 +162,144 @@ public class MinioStorageImpl implements MinioStorage {
                     .build()
             );
 
+            Path parent = Path.of(path).getParent();
+
+            String pathParent = parent == null ? "" : parent.toString();
+            String name = Path.of(path).getFileName().toString();
             String type = response.object().endsWith("/") ? "DIRECTORY" : "FILE";
 
-            return new DirectoryResource(
-                    Path.of(path).getParent().toString(),
-                    Path.of(path).getFileName().toString(),
-                    type
-                    );
+            return new DirectoryResource(pathParent, name, type);
 
         } catch (MinioException e) {
             throw new StorageException();
         }
 
+    }
+
+    @Override
+    public StorageResource renameObject(String from, String to) {
+        String bucketName = properties.getBucket();
+
+        try {
+            client.copyObject(CopyObjectArgs.builder()
+                    .bucket(bucketName)
+                    .object(to)
+                    .source(SourceObject.builder()
+                            .bucket(bucketName)
+                            .object(from)
+                            .build())
+                    .build());
+
+            deleteByPath(from);
+
+            StatObjectResponse response = client.statObject(
+                    StatObjectArgs.builder()
+                            .bucket(bucketName)
+                            .object(to)
+                            .build()
+            );
+            String path = response.object();
+            Path parent = Path.of(path).getParent();
+
+            String pathParent = parent == null ? "" : parent.toString();
+            String name = Path.of(path).getFileName().toString();
+
+
+            Long size = !(response.size() == 0) ? response.size(): null;
+            String type = response.object().endsWith("/") ? "DIRECTORY" : "FILE";
+
+
+            return new StorageResource(pathParent, name, size, type);
+
+        } catch (MinioException e) {
+            throw new StorageException();
+        }
+    }
+
+    @Override
+    public StorageResource moveObject(String from, String to) {
+        String bucketName = properties.getBucket();
+
+        try {
+            client.copyObject(CopyObjectArgs.builder()
+                    .bucket(bucketName)
+                    .object(to)
+                    .source(SourceObject.builder()
+                            .bucket(bucketName)
+                            .object(from)
+                            .build())
+                    .build());
+
+            deleteByPath(from);
+
+            StatObjectResponse response = client.statObject(
+                    StatObjectArgs.builder()
+                            .bucket(bucketName)
+                            .object(to)
+                            .build()
+            );
+            String path = response.object();
+            Path parent = Path.of(path).getParent();
+
+            String pathParent = parent == null ? "" : parent.toString();
+            String name = Path.of(path).getFileName().toString();
+
+
+            Long size = !(response.size() == 0) ? response.size(): null;
+            String type = response.object().endsWith("/") ? "DIRECTORY" : "FILE";
+
+
+            return new StorageResource(pathParent, name, size, type);
+
+        } catch (MinioException e) {
+            throw new StorageException();
+        }
+    }
+
+    @Override
+    public InputStream downloadResourceByPath(String path) {
+        try {
+            return client.getObject(GetObjectArgs.builder()
+                    .bucket(properties.getBucket())
+                    .object(path)
+                    .build());
+
+        }
+        catch (MinioException e){
+            throw new StorageException();
+        }
+    }
+
+    @Override
+    public List<StorageResource> findResourcesByName(String query) {
+        try {
+
+            Iterable<Result<Item>> objects = client.listObjects(ListObjectsArgs.builder()
+                    .bucket(properties.getBucket())
+                    .recursive(true)
+                    .build());
+
+
+            List<StorageResource> resourcesByQuery = new ArrayList<>();
+
+            for (Result<Item> item : objects) {
+                Item minioItem = item.get();
+                Path pathItem = Path.of(minioItem.objectName());
+                String parentPath = pathItem.getParent() != null ?
+                        pathItem.getParent().toString() + "/" : "";
+                String fileName = pathItem.getFileName() != null ?
+                        pathItem.getFileName().toString() :
+                        "";
+                Long size = !(minioItem.size() == 0) ? minioItem.size(): null;
+                String type = minioItem.objectName().endsWith("/") ? "DIRECTORY" : "FILE";
+
+                if (fileName.toLowerCase().contains(query.toLowerCase())) {
+                    resourcesByQuery.add(new StorageResource(parentPath, fileName, size, type));
+                }
+            }
+            return resourcesByQuery;
+        } catch (MinioException e) {
+            throw new StorageException();
+        }
     }
 }
