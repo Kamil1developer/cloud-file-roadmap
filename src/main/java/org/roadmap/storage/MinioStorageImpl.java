@@ -73,20 +73,20 @@ public class MinioStorageImpl implements MinioStorage {
                     .build()
             );
 
-            return storageMapper.toStorageResources(objects, path);
+            return storageMapper.toStorageResourcesByDirectory(objects, path);
 
         } catch (MinioException e) {
             throw new StorageException();
         }
     }
-
     @Override
-    public void deleteByPath(String path) {
+    public void deleteByPrefix(String path) {
         try {
 
             Iterable<Result<Item>> objects = client.listObjects(ListObjectsArgs.builder()
                     .bucket(properties.getBucket())
                     .prefix(path)
+                    .recursive(true)
                     .build()
             );
             List<DeleteRequest.Object> deleteObjects = new ArrayList<>();
@@ -108,6 +108,20 @@ public class MinioStorageImpl implements MinioStorage {
             for (Result<DeleteResult.Error> errorResult : results) {
                 DeleteResult.Error error = errorResult.get();
             }
+        } catch (MinioException e) {
+            throw new StorageException();
+        }
+    }
+
+    @Override
+    public void deleteByPath(String path) {
+        try {
+            client.removeObject(
+                    RemoveObjectArgs.builder()
+                            .bucket(properties.getBucket())
+                            .object(path)
+                            .build()
+            );
         } catch (MinioException e) {
             throw new StorageException();
         }
@@ -176,48 +190,9 @@ public class MinioStorageImpl implements MinioStorage {
 
     }
 
-    @Override
-    public StorageResource renameObject(String from, String to) {
-        String bucketName = properties.getBucket();
-
-        try {
-            client.copyObject(CopyObjectArgs.builder()
-                    .bucket(bucketName)
-                    .object(to)
-                    .source(SourceObject.builder()
-                            .bucket(bucketName)
-                            .object(from)
-                            .build())
-                    .build());
-
-            deleteByPath(from);
-
-            StatObjectResponse response = client.statObject(
-                    StatObjectArgs.builder()
-                            .bucket(bucketName)
-                            .object(to)
-                            .build()
-            );
-            String path = response.object();
-            Path parent = Path.of(path).getParent();
-
-            String pathParent = parent == null ? "" : parent.toString();
-            String name = Path.of(path).getFileName().toString();
-
-
-            Long size = !(response.size() == 0) ? response.size(): null;
-            String type = response.object().endsWith("/") ? "DIRECTORY" : "FILE";
-
-
-            return new StorageResource(pathParent, name, size, type);
-
-        } catch (MinioException e) {
-            throw new StorageException();
-        }
-    }
 
     @Override
-    public StorageResource moveObject(String from, String to) {
+    public StorageResource moveOrRenameObject(String from, String to) {
         String bucketName = properties.getBucket();
 
         try {
@@ -298,6 +273,23 @@ public class MinioStorageImpl implements MinioStorage {
                 }
             }
             return resourcesByQuery;
+        } catch (MinioException e) {
+            throw new StorageException();
+        }
+    }
+
+    @Override
+    public List<StorageResource> findAllResourcesByPrefix(String prefix) {
+        try {
+            Iterable<Result<Item>> objects = client.listObjects(ListObjectsArgs.builder()
+                    .bucket(properties.getBucket())
+                    .prefix(prefix)
+                    .recursive(true)
+                    .build()
+            );
+
+            return storageMapper.toStorageResourcesByPrefix(objects);
+
         } catch (MinioException e) {
             throw new StorageException();
         }
