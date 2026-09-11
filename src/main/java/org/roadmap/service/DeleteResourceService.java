@@ -10,6 +10,6 @@ public class DeleteResourceService {
     private final MinioStorage minioStorage;
 
     public void delete(String path){
-        minioStorage.deleteByPath(path);
+        minioStorage.deleteByPrefix(path);
     }
 }
