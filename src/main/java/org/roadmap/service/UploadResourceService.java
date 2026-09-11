@@ -19,11 +19,11 @@ public class UploadResourceService {
     private final MinioStorage storage;
     private final ResourceMapper mapper;
 
-    public Optional<List<UploadResponse>> upload(List<MultipartFile> files) throws IOException {
+    public Optional<List<UploadResponse>> upload(String path, List<MultipartFile> files) throws IOException {
         if (files.size() == 1) {
             MultipartFile file = files.getFirst();
             ObjectUploadRequest uploadRequest = new ObjectUploadRequest(
-                    file.getOriginalFilename(),
+                    path + file.getOriginalFilename(),
                     file.getInputStream(),
                     file.getSize(),
                     file.getContentType()
@@ -42,7 +42,7 @@ public class UploadResourceService {
             for (MultipartFile file : files) {
 
                 ObjectUploadRequest uploadRequest = new ObjectUploadRequest(
-                        file.getOriginalFilename(),
+                        path + file.getOriginalFilename(),
                         file.getInputStream(),
                         file.getSize(),
                         file.getContentType()
