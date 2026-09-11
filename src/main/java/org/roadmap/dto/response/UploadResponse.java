@@ -1,9 +1,12 @@
 package org.roadmap.dto.response;
 
+import com.fasterxml.jackson.annotation.JsonInclude;
+
 public record UploadResponse(
         String path,
         String name,
-        long size,
+        @JsonInclude(JsonInclude.Include.NON_NULL)
+        Long size,
         String type
 ){
 
