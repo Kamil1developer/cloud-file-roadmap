@@ -1,5 +1,7 @@
 package org.roadmap.exception;
 
+import io.minio.errors.ErrorResponseException;
+import org.roadmap.storage.exception.ResourceAlreadyExistsException;
 import org.roadmap.storage.exception.ResourceNotFoundException;
 import org.roadmap.storage.exception.StorageException;
 import org.springframework.dao.DataIntegrityViolationException;
@@ -28,6 +30,13 @@ public class GlobalExceptionHandler {
         return ResponseEntity
                 .status(HttpStatus.CONFLICT)
                 .body(new ErrorResponse(409, "пользователь занят"));
+    }
+
+    @ExceptionHandler(ResourceAlreadyExistsException.class)
+    public ResponseEntity<ErrorResponse> handleResourceAlreadyException(ResourceAlreadyExistsException exception){
+        return ResponseEntity.
+                status(HttpStatus.CONFLICT)
+                .body(new ErrorResponse(409, exception.getMessage()));
     }
 
     @ExceptionHandler(Exception.class)
