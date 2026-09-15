@@ -1,6 +1,7 @@
 package org.roadmap.storage;
 
 import io.minio.*;
+import io.minio.errors.ErrorResponseException;
 import io.minio.errors.MinioException;
 import io.minio.messages.DeleteRequest;
 import io.minio.messages.DeleteResult;
@@ -8,6 +9,7 @@ import io.minio.messages.Item;
 import lombok.RequiredArgsConstructor;
 import org.roadmap.config.storage.MinioProperties;
 import org.roadmap.storage.dto.request.ObjectUploadRequest;
+import org.roadmap.storage.exception.ResourceAlreadyExistsException;
 import org.roadmap.storage.exception.ResourceNotFoundException;
 import org.roadmap.storage.exception.StorageException;
 import org.roadmap.storage.mapper.MinioStorageMapper;
@@ -18,7 +20,9 @@ import org.springframework.stereotype.Component;
 import java.io.InputStream;
 import java.nio.file.Path;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 @Component
 @RequiredArgsConstructor
@@ -34,22 +38,43 @@ public class MinioStorageImpl implements MinioStorage {
         try {
 
             if (client.bucketExists(BucketExistsArgs.builder().bucket(bucketName).build())) {
-                client.putObject(PutObjectArgs.builder()
-                        .bucket(bucketName)
-                        .stream(uploadRequest.inputStream(), uploadRequest.size(), (long) -1)
-                        .contentType(uploadRequest.contentType())
-                        .object(uploadRequest.fileName())
-                        .build());
+                try {
+                    Map<String, String> headers = Map.of("If-None-Match","*");
+                    client.putObject(PutObjectArgs.builder()
+                            .bucket(bucketName)
+                            .stream(uploadRequest.inputStream(), uploadRequest.size(), (long) -1)
+                            .contentType(uploadRequest.contentType())
+                            .object(uploadRequest.fileName())
+                            .headers(headers)
+                            .build());
+                }
+                catch (ErrorResponseException e) {
+                    if ("PreconditionFailed".equals(e.errorResponse().code())) {
+                        throw new ResourceAlreadyExistsException();
+                    }
+
+                    throw new StorageException();
+                }
 
             } else {
                 client.makeBucket(MakeBucketArgs.builder().bucket(bucketName).build());
+                try {
+                    Map<String, String> headers = Map.of("If-None-Match","*");
+                    client.putObject(PutObjectArgs.builder()
+                            .bucket(bucketName)
+                            .stream(uploadRequest.inputStream(), uploadRequest.size(), (long) -1)
+                            .contentType(uploadRequest.contentType())
+                            .object(uploadRequest.fileName())
+                            .headers(headers)
+                            .build());
+                }
+                catch (ErrorResponseException e) {
+                    if ("PreconditionFailed".equals(e.errorResponse().code())) {
+                        throw new ResourceAlreadyExistsException();
+                    }
 
-                client.putObject(PutObjectArgs.builder()
-                        .bucket(bucketName)
-                        .stream(uploadRequest.inputStream(), uploadRequest.size(), (long) -1)
-                        .contentType(uploadRequest.contentType())
-                        .object(uploadRequest.fileName())
-                        .build());
+                    throw new StorageException();
+                }
             }
 
             Iterable<Result<Item>> objects = client.listObjects(
@@ -154,20 +179,44 @@ public class MinioStorageImpl implements MinioStorage {
         try {
 
             if (client.bucketExists(BucketExistsArgs.builder().bucket(bucketName).build())) {
-                client.putObject(PutObjectArgs.builder()
-                        .bucket(bucketName)
-                        .stream(InputStream.nullInputStream(), 0L, -1L)
-                        .object(path)
-                        .build());
+                try {
+                    Map<String, String> headers = Map.of("If-None-Match", "*");
+
+                    client.putObject(PutObjectArgs.builder()
+                            .bucket(bucketName)
+                            .stream(InputStream.nullInputStream(), 0L, -1L)
+                            .object(path)
+                            .headers(headers)
+                            .build());
+                }
+                catch (ErrorResponseException e) {
+                    if ("PreconditionFailed".equals(e.errorResponse().code())) {
+                        throw new ResourceAlreadyExistsException();
+                    }
+
+                    throw new StorageException();
+                }
 
             } else {
-                client.makeBucket(MakeBucketArgs.builder().bucket(bucketName).build());
+                try {
+                    Map<String, String> headers = Map.of("If-None-Match", "*");
 
-                client.putObject(PutObjectArgs.builder()
-                        .bucket(bucketName)
-                        .stream(InputStream.nullInputStream(), 0L, -1L)
-                        .object(path)
-                        .build());
+                    client.makeBucket(MakeBucketArgs.builder().bucket(bucketName).build());
+
+                    client.putObject(PutObjectArgs.builder()
+                            .bucket(bucketName)
+                            .stream(InputStream.nullInputStream(), 0L, -1L)
+                            .object(path)
+                            .headers(headers)
+                            .build());
+                }
+                catch (ErrorResponseException e) {
+                    if ("PreconditionFailed".equals(e.errorResponse().code())) {
+                        throw new ResourceAlreadyExistsException();
+                    }
+
+                    throw new StorageException();
+                }
             }
 
             StatObjectResponse response = client.statObject(StatObjectArgs.builder()
@@ -196,14 +245,24 @@ public class MinioStorageImpl implements MinioStorage {
         String bucketName = properties.getBucket();
 
         try {
-            client.copyObject(CopyObjectArgs.builder()
-                    .bucket(bucketName)
-                    .object(to)
-                    .source(SourceObject.builder()
-                            .bucket(bucketName)
-                            .object(from)
-                            .build())
-                    .build());
+            try {
+                client.copyObject(CopyObjectArgs.builder()
+                        .bucket(bucketName)
+                        .object(to)
+                        .source(SourceObject.builder()
+                                .bucket(bucketName)
+                                .object(from)
+                                .build())
+                        .headers(Map.of("If-None-Match", "*"))
+                        .build());
+
+            } catch (ErrorResponseException e) {
+
+                if ("PreconditionFailed".equals(e.errorResponse().code())) {
+                    throw new ResourceAlreadyExistsException();
+                }
+                throw new StorageException();
+            }
 
             deleteByPath(from);
 
