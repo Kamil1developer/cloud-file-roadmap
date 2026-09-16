@@ -42,7 +42,7 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ErrorResponse> handleUnexpectedException(){
         return ResponseEntity
-                .badRequest()
+                .status(HttpStatus.INTERNAL_SERVER_ERROR)
                 .body(new ErrorResponse(500, "неизвестная ошибка"));
     }
 
@@ -56,7 +56,7 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(StorageException.class)
     public ResponseEntity<ErrorResponse> handleStorageException(StorageException exception){
         return ResponseEntity.
-                status(HttpStatus.UNAUTHORIZED)
+                status(HttpStatus.INTERNAL_SERVER_ERROR)
                 .body(new ErrorResponse(500, exception.getMessage()));
     }
 
