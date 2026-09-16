@@ -11,6 +11,7 @@ import org.roadmap.dto.response.UploadResponse;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.servlet.mvc.method.annotation.StreamingResponseBody;
@@ -35,8 +36,14 @@ public class ResourceController {
     @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<List<UploadResponse>> upload(
             @RequestParam("path") String path,
-            @RequestPart("object") List<MultipartFile> file) throws IOException {
-        Optional<List<UploadResponse>> optionalUploadResponse = uploadService.upload(path,file);
+            @RequestPart("object") List<MultipartFile> file,
+            Authentication authentication) throws IOException {
+        Optional<List<UploadResponse>> optionalUploadResponse = uploadService.upload(
+                authentication.getName(),
+                path,
+                file
+        );
+
         if (optionalUploadResponse.isPresent()) {
             List<UploadResponse> uploadResponses = optionalUploadResponse.get();
             return ResponseEntity
@@ -54,9 +61,14 @@ public class ResourceController {
     @PostMapping("/move")
     public ResponseEntity<MoveOrRenameResponse> moveOrRename(
             @RequestParam("from") String from,
-            @RequestParam("to") String to) throws IOException {
-
-        MoveOrRenameResponse response = moveOrRenameService.moveOrRename(from, to);
+            @RequestParam("to") String to,
+            Authentication authentication) throws IOException {
+        MoveOrRenameResponse response =
+                moveOrRenameService.moveOrRename(
+                        authentication.getName(),
+                        from,
+                        to
+                );
         return ResponseEntity
                 .status(HttpStatus.OK)
                 .body(response);
@@ -66,8 +78,9 @@ public class ResourceController {
 
     @Operation(summary = "delete")
     @DeleteMapping
-    public ResponseEntity delete(@RequestParam("path") String path){
-        deleteService.delete(path);
+    public ResponseEntity delete(@RequestParam("path") String path,
+                                 Authentication authentication){
+        deleteService.delete(authentication.getName(), path);
 
         return ResponseEntity
                 .status(HttpStatus.NO_CONTENT)
@@ -79,11 +92,13 @@ public class ResourceController {
     public ResponseEntity<UploadResponse> get(@RequestParam("path")
                                                   @Pattern(regexp = "^(?!/)(?!.*//)(?!.*\\\\)[^\\\\\\p{Cntrl}]+$", message = "невалидный или отсутствующий путь")
                                                   @NotBlank
-                                                  String path) {
-        UploadResponse uploadResponse = getService.get(path);
+                                                  String path,
+                                              Authentication authentication) {
+        UploadResponse response =
+                getService.get(authentication.getName(), path);
 
         return ResponseEntity.status(HttpStatus.OK)
-                .body(uploadResponse);
+                .body(response);
     }
 
     @Operation(summary = "downloadResource")
@@ -91,9 +106,12 @@ public class ResourceController {
     public ResponseEntity<StreamingResponseBody> download(@RequestParam("path")
                                                               @NotBlank
                                                               @Pattern(regexp = "^(?!/)(?!.*//)(?!.*\\\\)[^\\\\\\p{Cntrl}]+$", message = "невалидный или отсутствующий путь")
-                                                       String path) throws IOException{
+                                                       String path, Authentication authentication) throws IOException{
 
-        InputStream inputStream = downloadService.downloadResource(path);
+        InputStream inputStream = downloadService.downloadResource(
+                authentication.getName(),
+                path
+        );
 
         StreamingResponseBody responseBody = outputStream -> {
             try (inputStream) {
@@ -107,11 +125,15 @@ public class ResourceController {
                 .body(responseBody);
     }
 
+    @Operation(summary = "Поиск ресурсов")
     @GetMapping("/search")
     public ResponseEntity<List<SearchResourceResponse>> search(@RequestParam("query")
                                                                    @NotBlank
-                                                                   String query){
-        List<SearchResourceResponse> searchResourceResponses = searchService.search(query);
+                                                                   String query, Authentication authentication){
+        List<SearchResourceResponse> searchResourceResponses = searchService.search(
+                authentication.getName(),
+                query
+        );
         return ResponseEntity
                 .status(HttpStatus.OK)
                 .body(searchResourceResponses);
