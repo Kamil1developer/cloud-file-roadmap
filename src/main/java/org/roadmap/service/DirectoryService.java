@@ -16,15 +16,26 @@ import java.util.List;
 public class DirectoryService {
     private final MinioStorage storage;
     private final DirectoryContentMapper mapper;
+    private final UserStoragePathResolver pathResolver;
 
-    public List<DirectoryContentResponse> getContent(String path){
-        List<StorageResource> resource = storage.getContentByDirectory(path);
-        return mapper.toDirectoryContentResponse(resource);
+    public List<DirectoryContentResponse> getContent(String username, String path){
+        List<StorageResource> resources = storage.getContentByDirectory(
+                        pathResolver.toStoragePath(username, path)
+                ).stream()
+                .map(resource -> pathResolver.toPublicResource(username, resource))
+                .toList();
+
+        return mapper.toDirectoryContentResponse(resources);
     }
 
 
-    public CreatedDirectoryResponse createDirectory(String path) {
-        DirectoryResource resource = storage.createDirectoryByPath(path);
-        return mapper.toCreatedDirectoryResponse(resource);
+    public CreatedDirectoryResponse createDirectory(String username, String path) {
+        DirectoryResource resource = storage.createDirectoryByPath(
+                pathResolver.toStoragePath(username, path)
+        );
+
+        return mapper.toCreatedDirectoryResponse(
+                pathResolver.toPublicResource(username, resource)
+        );
     }
 }
