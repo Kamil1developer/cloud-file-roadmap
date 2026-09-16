@@ -115,7 +115,7 @@ public class ResourceStorageIntegrationTest {
                         multipart("/resource")
                                 .file(multipartFile1)
                                 .file(multipartFile2)
-                                .param("path", "documents/doc1/"))
+                                .param("path", "documents/doc3/"))
                 .andExpect(status().isCreated());
     }
     @Test
@@ -169,7 +169,7 @@ public class ResourceStorageIntegrationTest {
                         multipart("/resource/move")
                                 .param("from", "documents/doc1/test1.txt")
                                 .param("to", "documents/doc1/test2.txt"))
-                .andExpect(status().isCreated());
+                .andExpect(status().isOk());
     }
 
     @Test
