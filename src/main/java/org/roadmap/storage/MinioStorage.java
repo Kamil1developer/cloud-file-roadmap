@@ -18,7 +18,7 @@ public interface MinioStorage {
     DirectoryResource createDirectoryByPath(String path);
     StorageResource moveOrRenameObject(String from, String to);
     InputStream downloadResourceByPath(String path);
-    List<StorageResource> findResourcesByName(String query);
+    List<StorageResource> findResourcesByName(String prefix, String query);
     List<StorageResource> findAllResourcesByPrefix(String prefix);
 
 
