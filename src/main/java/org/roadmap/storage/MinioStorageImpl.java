@@ -141,16 +141,33 @@ public class MinioStorageImpl implements MinioStorage {
     @Override
     public void deleteByPath(String path) {
         try {
+            client.statObject(
+                    StatObjectArgs.builder()
+                            .bucket(properties.getBucket())
+                            .object(path)
+                            .build()
+            );
+
             client.removeObject(
                     RemoveObjectArgs.builder()
                             .bucket(properties.getBucket())
                             .object(path)
                             .build()
             );
+        } catch (ErrorResponseException e) {
+            String errorCode = e.errorResponse().code();
+
+            if ("NoSuchKey".equals(errorCode)
+                    || "NoSuchObject".equals(errorCode)) {
+                throw new ResourceNotFoundException();
+            }
+
+            throw new StorageException();
         } catch (MinioException e) {
             throw new StorageException();
         }
     }
+
 
     public StorageResource getResourceByPath(String path) {
         try {
