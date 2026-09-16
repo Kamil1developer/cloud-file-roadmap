@@ -10,8 +10,11 @@ import java.io.InputStream;
 @RequiredArgsConstructor
 public class DownloadResourceService {
     private final MinioStorage storage;
+    private final UserStoragePathResolver pathResolver;
 
-    public InputStream downloadResource(String path){
-        return storage.downloadResourceByPath(path);
+    public InputStream downloadResource(String username, String path){
+        return storage.downloadResourceByPath(
+                pathResolver.toStoragePath(username, path)
+        );
     }
 }
