@@ -16,7 +16,7 @@ public class OpenApiConfig {
     @Bean
     public OpenApiCustomizer logoutOpenApiCustomizer() {
         return openApi -> openApi.path(
-                "/sign-out",
+                "/auth/sign-out",
                 new PathItem().post(
                         new Operation()
                                 .tags(List.of("Logout"))
@@ -27,7 +27,7 @@ public class OpenApiConfig {
                                 .responses(
                                         new ApiResponses()
                                                 .addApiResponse(
-                                                        "200",
+                                                        "204",
                                                         new ApiResponse()
                                                                 .description("Выход выполнен успешно")
                                                 )
