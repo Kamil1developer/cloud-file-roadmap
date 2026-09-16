@@ -35,6 +35,7 @@ public class AuthController {
     private final UserMapper userMapper;
     private final AuthenticationManager authenticationManager;
     private final SecurityContextRepository securityContextRepository;
+
     @PostMapping("/sign-up")
     @Operation(summary = "Регистрация пользователя ")
     public ResponseEntity<UserResponse> signUp(@Valid @RequestBody CreateUserRequest createUserRequest,

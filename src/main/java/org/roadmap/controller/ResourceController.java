@@ -5,6 +5,7 @@ import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Pattern;
 import lombok.RequiredArgsConstructor;
 import org.roadmap.dto.response.MoveOrRenameResponse;
+import org.roadmap.dto.response.ResourceResponse;
 import org.roadmap.dto.response.SearchResourceResponse;
 import org.roadmap.service.*;
 import org.roadmap.dto.response.UploadResponse;
@@ -89,12 +90,12 @@ public class ResourceController {
 
     @Operation(summary = "getResource")
     @GetMapping
-    public ResponseEntity<UploadResponse> get(@RequestParam("path")
+    public ResponseEntity<ResourceResponse> get(@RequestParam("path")
                                                   @Pattern(regexp = "^(?!/)(?!.*//)(?!.*\\\\)[^\\\\\\p{Cntrl}]+$", message = "невалидный или отсутствующий путь")
                                                   @NotBlank
                                                   String path,
                                               Authentication authentication) {
-        UploadResponse response =
+        ResourceResponse response =
                 getService.get(authentication.getName(), path);
 
         return ResponseEntity.status(HttpStatus.OK)
