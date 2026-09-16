@@ -8,8 +8,16 @@ import org.springframework.stereotype.Service;
 @Data
 public class DeleteResourceService {
     private final MinioStorage minioStorage;
+    private final UserStoragePathResolver pathResolver;
 
-    public void delete(String path){
-        minioStorage.deleteByPrefix(path);
+    public void delete(String username, String path){
+        String storagePath =
+                pathResolver.toStoragePath(username, path);
+
+        if (path.endsWith("/")) {
+            minioStorage.deleteByPrefix(storagePath);
+        } else {
+            minioStorage.deleteByPath(storagePath);
+        }
     }
 }
