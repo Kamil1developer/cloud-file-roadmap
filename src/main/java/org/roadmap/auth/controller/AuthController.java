@@ -37,10 +37,19 @@ public class AuthController {
     private final SecurityContextRepository securityContextRepository;
     @PostMapping("/sign-up")
     @Operation(summary = "Регистрация пользователя ")
-    public ResponseEntity<UserResponse> signUp(@Valid @RequestBody CreateUserRequest request){
-        RegisterUserDto registerUserDto = userMapper.toRegisterUserDto(request);
+    public ResponseEntity<UserResponse> signUp(@Valid @RequestBody CreateUserRequest createUserRequest,
+                                               HttpServletRequest request,
+                                               HttpServletResponse response){
+        RegisterUserDto registerUserDto = userMapper.toRegisterUserDto(createUserRequest);
 
         UserResponse userResponse = authService.createUser(registerUserDto);
+
+        authenticate(
+                createUserRequest.getUsername(),
+                createUserRequest.getPassword(),
+                request,
+                response
+        );
 
         return ResponseEntity
                 .status(HttpStatus.CREATED)
@@ -53,23 +62,46 @@ public class AuthController {
                                                HttpServletRequest request,
                                                HttpServletResponse response){
 
-        Authentication authenticationRequest = UsernamePasswordAuthenticationToken.
-                unauthenticated(
-                        signInRequest.getUsername(),
-                        signInRequest.getPassword());
-        Authentication authentication = authenticationManager.authenticate(authenticationRequest);
-
-        SecurityContext securityContext = SecurityContextHolder.createEmptyContext();
-        securityContext.setAuthentication(authentication);
-
-        SecurityContextHolder.setContext(securityContext);
-
-        securityContextRepository.saveContext(securityContext, request, response);
-
+        Authentication authentication = authenticate(
+                signInRequest.getUsername(),
+                signInRequest.getPassword(),
+                request,
+                response
+        );
 
         return ResponseEntity.
                 status(HttpStatus.OK)
                 .body(new UserResponse(authentication.getName()));
+    }
+
+    private Authentication authenticate(
+            String username,
+            String password,
+            HttpServletRequest request,
+            HttpServletResponse response
+    ) {
+        Authentication authenticationRequest =
+                UsernamePasswordAuthenticationToken.unauthenticated(
+                        username,
+                        password
+                );
+
+        Authentication authentication =
+                authenticationManager.authenticate(authenticationRequest);
+
+        SecurityContext securityContext =
+                SecurityContextHolder.createEmptyContext();
+
+        securityContext.setAuthentication(authentication);
+        SecurityContextHolder.setContext(securityContext);
+
+        securityContextRepository.saveContext(
+                securityContext,
+                request,
+                response
+        );
+
+        return authentication;
     }
 
 }
