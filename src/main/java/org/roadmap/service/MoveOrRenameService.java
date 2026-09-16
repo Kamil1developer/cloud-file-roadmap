@@ -2,7 +2,6 @@ package org.roadmap.service;
 
 import lombok.RequiredArgsConstructor;
 import org.roadmap.dto.response.MoveOrRenameResponse;
-import org.roadmap.mapper.ResourceMapper;
 import org.roadmap.storage.MinioStorage;
 import org.roadmap.storage.model.StorageResource;
 import org.springframework.stereotype.Service;
@@ -14,9 +13,12 @@ import java.util.List;
 @RequiredArgsConstructor
 public class MoveOrRenameService {
     private final MinioStorage storage;
-    private final ResourceMapper mapper;
+    private final UserStoragePathResolver pathResolver;
 
-    public MoveOrRenameResponse moveOrRename(String from, String to) {
+    public MoveOrRenameResponse moveOrRename(String username, String from, String to) {
+        from = pathResolver.toStoragePath(username, from);
+        to = pathResolver.toStoragePath(username, to);
+
         if (from.endsWith("/")) {
 
             List<StorageResource> resources = storage.findAllResourcesByPrefix(from);
@@ -43,6 +45,7 @@ public class MoveOrRenameService {
             String parentPath = Path.of(to).getParent() == null
                     ? ""
                     : Path.of(to).getParent().toString() + "/";
+            parentPath = pathResolver.toPublicPath(username, parentPath);
 
             String directoryName = Path.of(to).getFileName().toString();
 
@@ -70,6 +73,7 @@ public class MoveOrRenameService {
             String parentPath = Path.of(to).getParent() == null
                     ? ""
                     : Path.of(to).getParent().toString() + "/";
+            parentPath = pathResolver.toPublicPath(username, parentPath);
 
             String fileName =
                     Path.of(to).getFileName().toString();
