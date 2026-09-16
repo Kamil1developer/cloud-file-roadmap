@@ -305,11 +305,12 @@ public class MinioStorageImpl implements MinioStorage {
     }
 
     @Override
-    public List<StorageResource> findResourcesByName(String query) {
+    public List<StorageResource> findResourcesByName(String prefix, String query) {
         try {
 
             Iterable<Result<Item>> objects = client.listObjects(ListObjectsArgs.builder()
                     .bucket(properties.getBucket())
+                    .prefix(prefix)
                     .recursive(true)
                     .build());
 
