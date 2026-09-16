@@ -18,18 +18,22 @@ import java.util.Optional;
 public class UploadResourceService {
     private final MinioStorage storage;
     private final ResourceMapper mapper;
+    private final UserStoragePathResolver pathResolver;
 
-    public Optional<List<UploadResponse>> upload(String path, List<MultipartFile> files) throws IOException {
+    public Optional<List<UploadResponse>> upload(String username, String path, List<MultipartFile> files) throws IOException {
         if (files.size() == 1) {
             MultipartFile file = files.getFirst();
             ObjectUploadRequest uploadRequest = new ObjectUploadRequest(
-                    path + file.getOriginalFilename(),
+                    pathResolver.toStoragePath(username, path + file.getOriginalFilename()),
                     file.getInputStream(),
                     file.getSize(),
                     file.getContentType()
             );
 
-            StorageResource storageResource = storage.upload(uploadRequest);
+            StorageResource storageResource = pathResolver.toPublicResource(
+                    username,
+                    storage.upload(uploadRequest)
+            );
 
             UploadResponse uploadResponse = mapper.toUploadResponse(storageResource);
 
@@ -42,13 +46,15 @@ public class UploadResourceService {
             for (MultipartFile file : files) {
 
                 ObjectUploadRequest uploadRequest = new ObjectUploadRequest(
-                        path + file.getOriginalFilename(),
+                        pathResolver.toStoragePath(username, path + file.getOriginalFilename()),
                         file.getInputStream(),
                         file.getSize(),
                         file.getContentType()
                 );
-                String type = file.getContentType();
-                StorageResource storageResources = storage.upload(uploadRequest);
+                StorageResource storageResources = pathResolver.toPublicResource(
+                        username,
+                        storage.upload(uploadRequest)
+                );
                 UploadResponse uploadResponse = mapper.toUploadResponse(storageResources);
 
                 uploadResponses.add(uploadResponse);
